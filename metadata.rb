@@ -1,0 +1,7 @@
+name 'rna-seq'
+maintainer 'The Authors'
+maintainer_email 'you@example.com'
+license 'all_rights'
+description 'Installs/Configures rna-seq'
+long_description 'Installs/Configures rna-seq'
+version '0.1.0'
