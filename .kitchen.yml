@@ -23,4 +23,7 @@ platforms:
 
 suites:
   - name: default
+    run_list:
+      - recipe[rna-seq::_common]
+      - recipe[rna-seq::default]
     attributes:
