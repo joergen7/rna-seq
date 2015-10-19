@@ -5,4 +5,5 @@ This workflow recreates an RNA-Seq study by
 
 In this study, Tophat and Bowtie are used to align a pair of synthetic RNA read
 samples (case and control) in FastQ format to the *Drosophila melanogaster*
-reference genome.
+reference genome (from
+[iGenome](https://support.illumina.com/sequencing/sequencing_software/igenome.html)).
