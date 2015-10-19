@@ -18,11 +18,6 @@ directory node.dir.wf
 directory node.dir.data
 directory "#{node.dir.data}/read"
 
-# place workflow
-template "#{node.dir.wf}/rna-seq.cf" do
-  source "rna-seq.cf.erb"
-end
-
 # download input data
 remote_file fq_tar do
   action :create_if_missing
@@ -38,3 +33,10 @@ gunzip *.gz
   cwd "#{node.dir.data}/read"
   not_if "#{File.exists?( "#{node.dir.data}/read/GSM794483_C1_R1_1.fq" )}"
 end
+
+# place workflow
+template "#{node.dir.wf}/rna-seq.cf" do
+  source "rna-seq.cf.erb"
+end
+
+
