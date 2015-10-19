@@ -54,7 +54,7 @@ deftask cuffmerge( merged( File ) : <transcript( File )> geneanno( File ) [fa( F
     ln -s $fai genome.fa.fai
   fi
   printf "%s\n" ${transcript[@]} > assemblies.txt
-  cuffmerge -g $geneanno -s genome.fa -p 8 assemblies.txt
+  cuffmerge -g $geneanno -s genome.fa -p 4 assemblies.txt
 }*
 
 deftask cuffdiff( diff( File ) : merged( File ) <bam1( File )> <bam2( File )> [fa( File ) fai( File )] )in bash *{
@@ -74,7 +74,7 @@ deftask cuffdiff( diff( File ) : merged( File ) <bam1( File )> <bam2( File )> [f
     ln -s $fai genome.fa.fai
   fi
 
-  cuffdiff --no-update-check -p 8 \
+  cuffdiff --no-update-check -p 4 \
   -o diff_out \
   -b genome.fa \
   -L C1,C2 \
@@ -206,37 +206,31 @@ deftask cummerbund2( diff_genes( File ) nsig_gene nsig_isoform nsig_tss nsig_cds
 
 // INPUT DATA
 
-geneanno = 'Drosophila_melanogaster/Ensembl/BDGP5.25/Annotation/Genes/genes.gtf';
+geneanno = 'BDGP6/Annotation/Genes/genes.gtf';
 
-fa = 'Drosophila_melanogaster/Ensembl/BDGP5.25/Sequence/WholeGenomeFasta/genome.fa';
-fai = 'Drosophila_melanogaster/Ensembl/BDGP5.25/Sequence/WholeGenomeFasta/genome.fa.fai';
+fa = 'BDGP6/Sequence/WholeGenomeFasta/genome.fa';
+fai = 'BDGP6/Sequence/WholeGenomeFasta/genome.fa.fai';
 
 idx = 'idx-bt-drosophila.tar';
 
-fq-c1-1-gz = 'GSE32038_simulated_fastq_files/GSM794483_C1_R1_1.fq.gz'
-             'GSE32038_simulated_fastq_files/GSM794484_C1_R2_1.fq.gz'
-             'GSE32038_simulated_fastq_files/GSM794485_C1_R3_1.fq.gz';
+fq-c1-1 = 'read/GSM794483_C1_R1_1.fq'
+          'read/GSM794484_C1_R2_1.fq'
+          'read/GSM794485_C1_R3_1.fq';
 
-fq-c1-2-gz = 'GSE32038_simulated_fastq_files/GSM794483_C1_R1_2.fq.gz'
-             'GSE32038_simulated_fastq_files/GSM794484_C1_R2_2.fq.gz'
-             'GSE32038_simulated_fastq_files/GSM794485_C1_R3_2.fq.gz';
+fq-c1-2 = 'read/GSM794483_C1_R1_2.fq'
+          'read/GSM794484_C1_R2_2.fq'
+          'read/GSM794485_C1_R3_2.fq';
 
-fq-c2-1-gz = 'GSE32038_simulated_fastq_files/GSM794486_C2_R1_1.fq.gz'
-             'GSE32038_simulated_fastq_files/GSM794487_C2_R2_1.fq.gz'
-             'GSE32038_simulated_fastq_files/GSM794488_C2_R3_1.fq.gz';
+fq-c2-1 = 'read/GSM794486_C2_R1_1.fq'
+          'read/GSM794487_C2_R2_1.fq'
+          'read/GSM794488_C2_R3_1.fq';
 
-fq-c2-2-gz = 'GSE32038_simulated_fastq_files/GSM794486_C2_R1_2.fq.gz'
-             'GSE32038_simulated_fastq_files/GSM794487_C2_R2_2.fq.gz'
-             'GSE32038_simulated_fastq_files/GSM794488_C2_R3_2.fq.gz';
+fq-c2-2 = 'read/GSM794486_C2_R1_2.fq'
+          'read/GSM794487_C2_R2_2.fq'
+          'read/GSM794488_C2_R3_2.fq';
 
 
 // WORKFLOW
-
-// gunzip
-fq-c1-1 = gunzip( gz: fq-c1-1-gz );
-fq-c1-2 = gunzip( gz: fq-c1-2-gz );
-fq-c2-1 = gunzip( gz: fq-c2-1-gz );
-fq-c2-2 = gunzip( gz: fq-c2-2-gz );
 
 // tophat align
 bam-c1 = tophat-align(
