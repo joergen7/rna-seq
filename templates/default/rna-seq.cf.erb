@@ -7,11 +7,14 @@ deftask gunzip( out( File ) : gz( File ) )in bash *{
 
 // tophat
 deftask tophat-align( bam( File ) : geneanno( File ) <idx( File )> fa( File ) [fq1( File ) fq2( File )] )in bash *{
-  tar xf $idx
   if ! [ -f genome.fa ]
   then
     ln -s $fa genome.fa
   fi
+  for i in ${idx[@]}
+  do
+    ln -s $i ${i##*/}
+  done
   tophat --bowtie1 -G $geneanno -o thout genome $fq1 $fq2
   bam=thout/accepted_hits.bam
 }*
@@ -211,23 +214,25 @@ geneanno = 'BDGP6/Annotation/Genes/genes.gtf';
 fa = 'BDGP6/Sequence/WholeGenomeFasta/genome.fa';
 fai = 'BDGP6/Sequence/WholeGenomeFasta/genome.fa.fai';
 
-idx = 'idx-bt-drosophila.tar';
+idx = 'BDGP6/Sequence/BowtieIndex/genome.1.ebwt' 'BDGP6/Sequence/BowtieIndex/genome.2.ebwt'
+      'BDGP6/Sequence/BowtieIndex/genome.3.ebwt' 'BDGP6/Sequence/BowtieIndex/genome.4.ebwt'
+      'BDGP6/Sequence/BowtieIndex/genome.rev.1.ebwt' 'BDGP6/Sequence/BowtieIndex/genome.rev.2.ebwt';
 
-fq-c1-1 = 'read/GSM794483_C1_R1_1.fq'
-          'read/GSM794484_C1_R2_1.fq'
-          'read/GSM794485_C1_R3_1.fq';
+fq-c1-1 = 'fastq/GSM794483_C1_R1_1.fq'
+          'fastq/GSM794484_C1_R2_1.fq'
+          'fastq/GSM794485_C1_R3_1.fq';
 
-fq-c1-2 = 'read/GSM794483_C1_R1_2.fq'
-          'read/GSM794484_C1_R2_2.fq'
-          'read/GSM794485_C1_R3_2.fq';
+fq-c1-2 = 'fastq/GSM794483_C1_R1_2.fq'
+          'fastq/GSM794484_C1_R2_2.fq'
+          'fastq/GSM794485_C1_R3_2.fq';
 
-fq-c2-1 = 'read/GSM794486_C2_R1_1.fq'
-          'read/GSM794487_C2_R2_1.fq'
-          'read/GSM794488_C2_R3_1.fq';
+fq-c2-1 = 'fastq/GSM794486_C2_R1_1.fq'
+          'fastq/GSM794487_C2_R2_1.fq'
+          'fastq/GSM794488_C2_R3_1.fq';
 
-fq-c2-2 = 'read/GSM794486_C2_R1_2.fq'
-          'read/GSM794487_C2_R2_2.fq'
-          'read/GSM794488_C2_R3_2.fq';
+fq-c2-2 = 'fastq/GSM794486_C2_R1_2.fq'
+          'fastq/GSM794487_C2_R2_2.fq'
+          'fastq/GSM794488_C2_R3_2.fq';
 
 
 // WORKFLOW
