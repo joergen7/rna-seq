@@ -209,47 +209,47 @@ deftask cummerbund2( diff_genes( File ) nsig_gene nsig_isoform nsig_tss nsig_cds
 
 // INPUT DATA
 
-geneanno = 'BDGP6/Annotation/Genes/genes.gtf';
+geneanno = "BDGP6/Annotation/Genes/genes.gtf";
 
-fa = 'BDGP6/Sequence/WholeGenomeFasta/genome.fa';
-fai = 'BDGP6/Sequence/WholeGenomeFasta/genome.fa.fai';
+fa = "BDGP6/Sequence/WholeGenomeFasta/genome.fa";
+fai = "BDGP6/Sequence/WholeGenomeFasta/genome.fa.fai";
 
-idx = 'BDGP6/Sequence/BowtieIndex/genome.1.ebwt' 'BDGP6/Sequence/BowtieIndex/genome.2.ebwt'
-      'BDGP6/Sequence/BowtieIndex/genome.3.ebwt' 'BDGP6/Sequence/BowtieIndex/genome.4.ebwt'
-      'BDGP6/Sequence/BowtieIndex/genome.rev.1.ebwt' 'BDGP6/Sequence/BowtieIndex/genome.rev.2.ebwt';
+idx = "BDGP6/Sequence/BowtieIndex/genome.1.ebwt' 'BDGP6/Sequence/BowtieIndex/genome.2.ebwt"
+      "BDGP6/Sequence/BowtieIndex/genome.3.ebwt' 'BDGP6/Sequence/BowtieIndex/genome.4.ebwt"
+      "BDGP6/Sequence/BowtieIndex/genome.rev.1.ebwt' 'BDGP6/Sequence/BowtieIndex/genome.rev.2.ebwt";
 
-fq-c1-1 = 'fastq/GSM794483_C1_R1_1.fq'
-          'fastq/GSM794484_C1_R2_1.fq'
-          'fastq/GSM794485_C1_R3_1.fq';
+fq-c1-1 = "fastq/GSM794483_C1_R1_1.fq"
+          "fastq/GSM794484_C1_R2_1.fq"
+          "fastq/GSM794485_C1_R3_1.fq";
 
-fq-c1-2 = 'fastq/GSM794483_C1_R1_2.fq'
-          'fastq/GSM794484_C1_R2_2.fq'
-          'fastq/GSM794485_C1_R3_2.fq';
+fq-c1-2 = "fastq/GSM794483_C1_R1_2.fq"
+          "fastq/GSM794484_C1_R2_2.fq"
+          "fastq/GSM794485_C1_R3_2.fq";
 
-fq-c2-1 = 'fastq/GSM794486_C2_R1_1.fq'
-          'fastq/GSM794487_C2_R2_1.fq'
-          'fastq/GSM794488_C2_R3_1.fq';
+fq-c2-1 = "fastq/GSM794486_C2_R1_1.fq"
+          "fastq/GSM794487_C2_R2_1.fq"
+          "fastq/GSM794488_C2_R3_1.fq";
 
-fq-c2-2 = 'fastq/GSM794486_C2_R1_2.fq'
-          'fastq/GSM794487_C2_R2_2.fq'
-          'fastq/GSM794488_C2_R3_2.fq';
+fq-c2-2 = "fastq/GSM794486_C2_R1_2.fq"
+          "fastq/GSM794487_C2_R2_2.fq"
+          "fastq/GSM794488_C2_R3_2.fq";
 
 
 // WORKFLOW
 
 // tophat align
 bam-c1 = tophat-align(
-             geneanno: geneanno
-             idx: idx
-             fa:  fa
-             fq1: fq-c1-1
+             geneanno: geneanno,
+             idx: idx,
+             fa:  fa,
+             fq1: fq-c1-1,
              fq2: fq-c1-2 );
         
 bam-c2 = tophat-align(
-             geneanno: geneanno
-             idx: idx
-             fa:  fa
-             fq1: fq-c2-1
+             geneanno: geneanno,
+             idx: idx,
+             fa:  fa,
+             fq1: fq-c2-1,
              fq2: fq-c2-2 );
 
 bam = bam-c1 bam-c2;
@@ -258,16 +258,16 @@ transcript-c1 = cufflinks( bam: bam-c1 );
 transcript-c2 = cufflinks( bam: bam-c2 );
 
 merged = cuffmerge(
-  transcript: transcript-c1 transcript-c2
-  geneanno: geneanno
-  fa: fa
+  transcript: transcript-c1 transcript-c2,
+  geneanno: geneanno,
+  fa: fa,
   fai: fai );
 
 diff = cuffdiff(
-  merged: merged
-  bam1: bam-c1
-  bam2: bam-c2
-  fa: fa
+  merged: merged,
+  bam1: bam-c1,
+  bam2: bam-c2,
+  fa: fa,
   fai: fai );
 
 
@@ -277,10 +277,10 @@ csdensity scatter volcano regucalcin_expression regucalcin_isoforms = cummerbund
 
 // step 14
 bai = samtools-index( bam: bam );
-stats = samtools-idxstats( bam: bam bai: bai );
+stats = samtools-idxstats( bam: bam, bai: bai );
 
 // step 15
-comparison = cuffcompare( gtf: transcript-c1 transcript-c2 geneanno: geneanno );
+comparison = cuffcompare( gtf: transcript-c1 transcript-c2, geneanno: geneanno );
 
 // steps 16 - 18
 diff_genes nsig_gene nsig_isoform nsig_tss nsig_cds nsig_promoter nsig_splicing nsig_relCDS = cummerbund2( diff: diff );
