@@ -24,14 +24,8 @@ deftask samtools-index( bai( File ): bam( File ) )in bash *{
 
 deftask samtools-idxstats( idxstats( File ) : bam( File ) bai( File ) )in bash *{
 
-  if ! [ -f alignment.bam ]
-  then
-    ln -s $bam alignment.bam
-  fi
-  if ! [ -f alignment.bam.bai ]
-  then
-    ln -s $bai alignment.bam.bai
-  fi
+  ln -sf $bam alignment.bam
+  ln -sf $bai alignment.bam.bai
 
   samtools idxstats alignment.bam > $idxstats
 }*
@@ -45,14 +39,8 @@ deftask cufflinks( transcript( File ) : bam( File ) )in bash *{
 // cuffmerge
 deftask cuffmerge( merged( File ) : <transcript( File )> geneanno( File ) [fa( File ) fai( File )] )in bash *{
   merged=merged_asm/merged.gtf
-  if ! [ -f genome.fa ]
-  then
-    ln -s $fa genome.fa
-  fi
-  if ! [ -f genome.fa.fai ]
-  then
-    ln -s $fai genome.fa.fai
-  fi
+  ln -sf $fa genome.fa
+  ln -sf $fai genome.fa.fai
   printf "%s\n" ${transcript[@]} > assemblies.txt
   cuffmerge -g $geneanno -s genome.fa -p 4 assemblies.txt
 }*
@@ -65,14 +53,8 @@ deftask cuffdiff( diff( File ) : merged( File ) <bam1( File )> <bam2( File )> [f
   b2=`printf ",%s" ${bam2[@]}`
   b2=${b2:1}
 
-  if ! [ -f genome.fa ]
-  then
-    ln -s $fa genome.fa
-  fi
-  if ! [ -f genome.fa.fai ]
-  then
-    ln -s $fai genome.fa.fai
-  fi
+  ln -sf $fa genome.fa
+  ln -sf $fai genome.fa.fai
 
   cuffdiff --no-update-check -p 4 \
   -o diff_out \
