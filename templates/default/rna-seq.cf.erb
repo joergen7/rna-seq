@@ -7,13 +7,10 @@ deftask gunzip( out( File ) : gz( File ) )in bash *{
 
 // tophat
 deftask tophat-align( bam( File ) : geneanno( File ) <idx( File )> fa( File ) [fq1( File ) fq2( File )] )in bash *{
-  if ! [ -f genome.fa ]
-  then
-    ln -s $fa genome.fa
-  fi
+  ln -sf $fa genome.fa
   for i in ${idx[@]}
   do
-    ln -s $i ${i##*/}
+    ln -sf $i ${i##*/}
   done
   tophat --bowtie1 -G $geneanno -o thout genome $fq1 $fq2
   bam=thout/accepted_hits.bam
