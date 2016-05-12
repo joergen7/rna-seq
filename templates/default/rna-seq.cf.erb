@@ -2,17 +2,15 @@
 
 // gzip
 deftask gunzip( out( File ) : gz( File ) )in bash *{
+  out=unzipped_${gz%.gz}
   gzip -c -d $gz > $out
 }*
 
 // tophat
 deftask tophat-align( bam( File ) : geneanno( File ) <idx( File )> fa( File ) [fq1( File ) fq2( File )] )in bash *{
-  ln -sf $fa genome.fa
-  for i in ${idx[@]}
-  do
-    ln -sf $i ${i##*/}
-  done
-  tophat --bowtie1 -G $geneanno -o thout genome $fq1 $fq2
+  idxname=${idx[0]%.?.ebwt}
+  ln -sf $fa $idxname.fa
+  tophat --bowtie1 -G $geneanno -o thout $idxname $fq1 $fq2
   bam=thout/accepted_hits.bam
 }*
 
@@ -23,10 +21,8 @@ deftask samtools-index( bai( File ): bam( File ) )in bash *{
 }*
 
 deftask samtools-idxstats( idxstats( File ) : bam( File ) bai( File ) )in bash *{
-
-  ln -sf $bam alignment.bam
-  ln -sf $bai alignment.bam.bai
-
+  ln -sf $bai $bam.bai
+  idxstats=idxstats.txt
   samtools idxstats alignment.bam > $idxstats
 }*
 
@@ -38,11 +34,10 @@ deftask cufflinks( transcript( File ) : bam( File ) )in bash *{
 
 // cuffmerge
 deftask cuffmerge( merged( File ) : <transcript( File )> geneanno( File ) [fa( File ) fai( File )] )in bash *{
-  merged=merged_asm/merged.gtf
-  ln -sf $fa genome.fa
-  ln -sf $fai genome.fa.fai
+  ln -sf $fai $fa.fai
   printf "%s\n" ${transcript[@]} > assemblies.txt
-  cuffmerge -g $geneanno -s genome.fa -p 4 assemblies.txt
+  cuffmerge -g $geneanno -s $fa -p 4 assemblies.txt
+  merged=merged_asm/merged.gtf
 }*
 
 deftask cuffdiff( diff( File ) : merged( File ) <bam1( File )> <bam2( File )> [fa( File ) fai( File )] )in bash *{
@@ -63,13 +58,16 @@ deftask cuffdiff( diff( File ) : merged( File ) <bam1( File )> <bam2( File )> [f
   -u $merged \
   $b1 $b2
 
+  diff=diff.tar
   tar cf $diff diff_out
 }*
 
 deftask cuffcompare( out( File ) : <gtf( File )> geneanno( File ) )in bash *{
+
   printf "%s\n" ${gtf[@]} > gtf_out_list.txt
   cuffcompare -i gtf_out_list.txt -r $geneanno
 
+  out=comparison.csv
   for i in `ls *.tmap`
   do
     echo $i >> $out
