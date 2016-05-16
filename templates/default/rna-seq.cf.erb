@@ -23,7 +23,7 @@ deftask samtools-index( bai( File ): bam( File ) )in bash *{
 deftask samtools-idxstats( idxstats( File ) : bam( File ) bai( File ) )in bash *{
   ln -sf $bai $bam.bai
   idxstats=idxstats.txt
-  samtools idxstats alignment.bam > $idxstats
+  samtools idxstats $bam > $idxstats
 }*
 
 // cufflinks
@@ -34,9 +34,10 @@ deftask cufflinks( transcript( File ) : bam( File ) )in bash *{
 
 // cuffmerge
 deftask cuffmerge( merged( File ) : <transcript( File )> geneanno( File ) [fa( File ) fai( File )] )in bash *{
-  ln -sf $fai $fa.fai
+  ln -sf $fa genome.fa
+  ln -sf $fai genome.fa.fai
   printf "%s\n" ${transcript[@]} > assemblies.txt
-  cuffmerge -g $geneanno -s $fa -p 4 assemblies.txt
+  cuffmerge -g $geneanno -s genome.fa -p 4 assemblies.txt
   merged=merged_asm/merged.gtf
 }*
 
