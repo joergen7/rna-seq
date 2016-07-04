@@ -2,7 +2,7 @@
 
 This workflow exemplifies the comparison of DNA expression levels in two experimental conditions from RNA-Seq data. It reimplements a study by [Trapnell et al. 2012](http://www.nature.com/nprot/journal/v7/n3/full/nprot.2012.016.html).
 
-A detailed description can be found on the [Cuneiform website](http://cuneiform-lang.org/examples/2016/02/26/rna-seq/). This cookbook installs all necessary tools, downloads all necessary data, sets up Cuneiform, and places the [workflow](https://github.com/joergen7/rna-seq/blob/master/templates/default/rna-seq.cf.erb) in a predetermined location. The cookbook can be run on any system in a virtual machine. For running the cookbook natively, an Ubuntu 14.04 or higher is required.
+A detailed description can be found on the [Cuneiform website](http://cuneiform-lang.org/examples/2016/02/26/rna-seq/). This cookbook installs all necessary tools, downloads all necessary data, sets up Cuneiform, and places the [workflow](https://github.com/joergen7/rna-seq/blob/master/templates/default/rna-seq.cf.erb) in a predetermined location. The cookbook can be run on any system in a virtual machine. For running the cookbook natively, an Ubuntu 16.04 or higher is required.
 
 Below you find installation instructions for, both, the native and the virtual machine setup.
 
