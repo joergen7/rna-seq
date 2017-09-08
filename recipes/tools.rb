@@ -5,7 +5,6 @@
 #
 # Copyright (c) 2015 Jörgen Brandt, All Rights Reserved.
 
-include_recipe "chef-bioinf-worker::bdgp6"
 include_recipe "chef-bioinf-worker::tophat"
 include_recipe "chef-bioinf-worker::cufflinks"
 include_recipe "chef-bioinf-worker::cummerbund"
