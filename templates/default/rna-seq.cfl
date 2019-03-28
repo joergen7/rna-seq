@@ -1,0 +1,397 @@
+% RNA-SEQ
+%
+% Cuneiform RNA-seq workflow
+%
+%
+% Copyright:: 2015-2019 Jörgen Brandt <joergen@cuneiform-lang.org>
+%
+% Licensed under the Apache License, Version 2.0 (the "License");
+% you may not use this file except in compliance with the License.
+% You may obtain a copy of the License at
+%
+%    http://www.apache.org/licenses/LICENSE-2.0
+%
+% Unless required by applicable law or agreed to in writing, software
+% distributed under the License is distributed on an "AS IS" BASIS,
+% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+% See the License for the specific language governing permissions and
+% limitations under the License.
+%
+%
+%
+%---------------------------------------------------------------------
+
+%%====================================================================
+%% Function Definitions
+%%====================================================================
+
+def samtools-faidx( fa : File ) -> <fai : File>
+in Bash *{
+  samtools faidx $fa
+  fai=$fa.fai
+}*
+
+def bowtie-build( fa : File ) -> <idx : File>
+in Bash *{
+  idx=idx.tar
+  bowtie-build $fa idx
+  tar cf $idx idx.*
+}*
+
+def tophat-align( fq1lst   : [File],
+                  fq2lst   : [File],
+                  geneanno : File,
+                  fa       : File,
+                  idx      : File ) -> <bam : File>
+in Bash *{
+
+  r1=`printf ",%s" ${fq1lst[@]}`
+  r1=${r1:1}
+
+  r2=`printf ",%s" ${fq2lst[@]}`
+  r2=${r2:1}
+
+  tar xf $idx
+  ln -sf $fa idx.fa
+  tophat -p 8 --bowtie1 -G $geneanno -o thout idx $r1 $r2
+  bam=thout/accepted_hits.bam
+}*
+
+def samtools-index( bam : File ) -> <bai : File>
+in Bash *{
+  bai=$bam.bai
+  samtools index $bam
+}*
+
+def samtools-idxstats( bam : File, bai : File ) -> <idxstats : File>
+in Bash *{
+  ln -sf $bai $bam.bai
+  idxstats=idxstats.txt
+  samtools idxstats $bam > $idxstats
+}*
+
+def cufflinks( bam : File ) -> <transcript : File>
+in Bash *{
+  cufflinks -p 8 -o clout $bam
+  transcript=clout/transcripts.gtf
+}*
+
+def cuffmerge( transcript-lst : [File],
+               geneanno       : File,
+               fa             : File,
+               fai            : File ) -> <merged : File>
+in Bash *{
+  ln -sf $fa genome.fa
+  ln -sf $fai genome.fa.fai
+  printf "%s\n" ${transcript[@]} > assemblies.txt
+  cuffmerge -p 8 -g $geneanno -s genome.fa assemblies.txt
+  merged=merged_asm/merged.gtf
+}*
+
+def cuffdiff( merged : File,
+              bam1-lst : [File],
+              bam2-lst : [File],
+              fa       : File,
+              fai      : File ) -> <diff : File>
+in Bash *{
+
+  b1=`printf ",%s" ${bam1[@]}`
+  b1=${b1:1}
+
+  b2=`printf ",%s" ${bam2[@]}`
+  b2=${b2:1}
+
+  ln -sf $fa genome.fa
+  ln -sf $fai genome.fa.fai
+
+  cuffdiff -p 8 --no-update-check \
+  -o diff_out \
+  -b genome.fa \
+  -L C1,C2 \
+  -u $merged \
+  $b1 $b2
+
+  diff=diff.tar
+  tar cf $diff diff_out
+}*
+
+def cuffcompare( gtf-lst : [File], geneanno : File ) -> <comparison : File>
+in Bash *{
+
+  printf "%s\n" ${gtf[@]} > gtf_out_list.txt
+  cuffcompare -i gtf_out_list.txt -r $geneanno
+
+  out=comparison.csv
+  for i in `ls *.tmap`
+  do
+    echo $i >> $out
+    awk 'NR > 1 { s[$3]++ } END { for (j in s) { print j, s[j] }}' $i >> $out
+  done
+}*
+
+def cummerbund1( diff : File ) ->
+  <csdensity : File,
+   scatter : File,
+   volcano : File,
+   regucalcin_expression : File,
+   regucalcin_isoforms : File>
+in R *{
+
+  # load libraries
+  library(cummeRbund)
+
+  # prepare data directory
+  system( paste( "tar xf", diff ) )
+
+  # prepare output directory
+  res.out.dir <- "rescb"
+  system( paste( "mkdir", res.out.dir ) )
+
+
+  # create cummerbund database
+  cuff_data <- readCufflinks( 'diff_out' )
+
+  # plot distribution of expression levels
+  csdensity <- paste( res.out.dir, "csDensity.pdf", sep="/" )
+  pdf( csdensity )
+  csDensity( genes( cuff_data) )
+  dev.off()
+
+  # compare the expression of each gene in both conditions in a scatter plot
+  scatter <- paste( res.out.dir, "csScatter.pdf", sep="/" )
+  pdf( scatter )
+  csScatter( genes( cuff_data ), 'C1', 'C2' )
+  dev.off()
+
+  # compare differentially expressed genes in volcano plot
+  volcano <- paste( res.out.dir, "csVolcano.pdf", sep="/" )
+  pdf( volcano )
+  csVolcano( genes( cuff_data ), 'C1', 'C2'
+             # , alpha=0.05, showSignificant=T
+  )
+  dev.off()
+
+  # define gene of interest regucalcin
+  mygene <- getGene( cuff_data, 'regucalcin' )
+
+  # expression levels for gene of interest regucalcin
+  regucalcin_expression <-
+    paste(
+      res.out.dir,
+      "regucalcin_expressionBarplot.pdf",
+      sep="/" )
+  pdf( regucalcin_expression )
+  expressionBarplot( mygene )
+  dev.off()
+
+  # individual isoform expression levels for gene of interest regucalcin
+  regucalcin_isoforms <-
+    paste(
+      res.out.dir,
+      "regucalcin_expressionBarplot_isoforms.pdf",
+      sep="/" )
+  pdf( regucalcin_isoforms )
+  expressionBarplot( isoforms( mygene ) )
+  dev.off()
+}*
+
+def cummerbund2( diff : File ) ->
+  <diff_genes    : File,
+   nsig_gene     : Str,
+   nsig_isoform  : Str,
+   nsig_tss      : Str,
+   nsig_cds      : Str,
+   nsig_promoter : Str,
+   nsig_splicing : Str,
+   nsig_relCDS   : Str>
+in R *{
+
+  # load libraries
+  library(cummeRbund)
+
+  # prepare data directory
+  system( paste( "tar xf", diff ) )
+
+  # prepare output directory
+  res.out.dir <- "rescb"
+  system( paste( "mkdir", res.out.dir ) )
+
+
+  # create cummerbund database
+  cuff_data <- readCufflinks( 'diff_out' )
+
+  gene_diff_data <- diffData( genes( cuff_data ) )
+  sig_gene_data <- subset( gene_diff_data, ( significant == 'yes' ) )
+  nsig_gene = nrow( sig_gene_data )
+
+  isoform_diff_data <- diffData( isoforms( cuff_data ), 'C1', 'C2' )
+  sig_isoform_data <- subset( isoform_diff_data, ( significant == 'yes' ) )
+  nsig_isoform = nrow( sig_isoform_data )
+
+  tss_diff_data <- diffData( TSS( cuff_data ), 'C1', 'C2' )
+  sig_tss_data <- subset( tss_diff_data, ( significant == 'yes' ) )
+  nsig_tss = nrow( sig_tss_data )
+
+  cds_diff_data <- diffData( CDS( cuff_data ), 'C1', 'C2' )
+  sig_cds_data <- subset( cds_diff_data, ( significant == 'yes' ) )
+  nsig_cds = nrow( sig_cds_data )
+
+  promoter_diff_data <- distValues( promoters( cuff_data ) )
+  sig_promoter_data <- subset( promoter_diff_data, ( significant == 'yes' ) )
+  nsig_promoter = nrow( sig_promoter_data )
+
+  splicing_diff_data <- distValues( splicing( cuff_data ) )
+  sig_splicing_data <- subset( splicing_diff_data, ( significant == 'yes' ) )
+  nsig_splicing = nrow( sig_splicing_data )
+
+  relCDS_diff_data <- distValues(relCDS( cuff_data ) )
+  sig_relCDS_data <- subset( relCDS_diff_data, ( significant == 'yes' ) )
+  nsig_relCDS = nrow( sig_relCDS_data )
+
+  gene_diff_data <- diffData( genes( cuff_data ) )
+  sig_gene_data <- subset( gene_diff_data, ( significant == 'yes' ) )
+  diff_genes = 'diff_genes.txt'
+  write.table(
+    sig_gene_data,
+    diff_genes,
+    sep='\t',
+    row.names = F,
+    col.names = T,
+    quote = F )
+}*
+
+
+%%====================================================================
+%% Input Data
+%%====================================================================
+
+let geneanno : File =
+  'BDGP6/Annotation/Genes/genes.gtf';
+
+let fa : File =
+  'BDGP6/Sequence/WholeGenomeFasta/genome.fa';
+
+let c1-fq1-lst : [File] =
+  ['GSE32038/GSM794483_C1_R1_1.fq',
+   'GSE32038/GSM794484_C1_R2_1.fq',
+   'GSE32038/GSM794485_C1_R3_1.fq' : File];
+
+let c1-fq2-lst : [File] =
+  ['GSE32038/GSM794483_C1_R1_2.fq',
+   'GSE32038/GSM794484_C1_R2_2.fq',
+   'GSE32038/GSM794485_C1_R3_2.fq' : File];
+
+let c2-fq1-lst : [File] =
+  ['GSE32038/GSM794486_C2_R1_1.fq',
+   'GSE32038/GSM794487_C2_R2_1.fq',
+   'GSE32038/GSM794488_C2_R3_1.fq' : File];
+
+let c2-fq2-lst : [File] =
+  ['GSE32038/GSM794486_C2_R1_2.fq',
+   'GSE32038/GSM794487_C2_R2_2.fq',
+   'GSE32038/GSM794488_C2_R3_2.fq' : File];
+
+
+%%====================================================================
+%% Workflow
+%%====================================================================
+
+let <idx = idx : File> =
+  bowtie-build( fa = fa );
+
+let <bam = c1-bam : File> =
+  tophat-align(
+    fq1lst   = c1-fq1-lst,
+    fq2lst   = c1-fq2-lst,
+    geneanno = geneanno,
+    fa       = fa,
+    idx      = idx );
+        
+let <bam = c2-bam : File> =
+  tophat-align(
+    fq1lst   = c2-fq1-lst,
+    fq2lst   = c2-fq2-lst,
+    geneanno = geneanno,
+    fa       = fa,
+    idx      = idx );
+
+let <transcript = c1-transcript : File> =
+  cufflinks( bam = c1-bam );
+
+let <transcript = c2-transcript : File> =
+  cufflinks( bam = c2-bam );
+
+let <fai = fai : File> =
+  samtools-faidx( fa = fa );
+
+let <merged = merged : File> =
+  cuffmerge(
+    transcript-lst = [c1-transcript, c2-transcript : File],
+    geneanno       = geneanno,
+    fa             = fa,
+    fai            = fai );
+
+let <diff = diff : File> =
+  cuffdiff(
+    merged   = merged,
+    bam1-lst = [c1-bam : File],
+    bam2-lst = [c2-bam : File],
+    fa       = fa,
+    fai      = fai );
+
+% steps 9-13
+let <csdensity             = csdensity             : File,
+     scatter               = scatter               : File,
+     volcano               = volcano               : File,
+     regucalcin_expression = regucalcin_expression : File,
+     regucalcin_isoforms   = regucalcin_isoforms   : File> =
+  cummerbund1( diff = diff );
+
+% step 14
+let idxstats-lst : [File] =
+  for bam : File <- [c1-bam, c2-bam : File] do
+
+    let <bai = bai : File> =
+      samtools-index( bam = bam );
+
+    ( samtools-idxstats( bam = bam, bai = bai )|idxstats ) : File
+
+  end;
+
+% step 15
+let <comparison = comparison : File> =
+  cuffcompare(
+    gtf-lst  = [c1-transcript, c2-transcript : File],
+    geneanno = geneanno );
+
+% steps 16-18
+let <diff_genes    = diff_genes    : File,
+     nsig_gene     = nsig_gene     : Str,
+     nsig_isoform  = nsig_isoform  : Str,
+     nsig_tss      = nsig_tss      : Str,
+     nsig_cds      = nsig_cds      : Str,
+     nsig_promoter = nsig_promoter : Str,
+     nsig_splicing = nsig_splicing : Str,
+     nsig_relCDS   = nsig_relCDS   : Str> =
+  cummerbund2( diff = diff );
+
+
+%%====================================================================
+%% Query
+%%====================================================================
+
+<csdensity             = csdensity,
+ scatter               = scatter,
+ volcano               = volcano,
+ regucalcin_expression = regucalcin_expression,
+ regucalcin_isoforms   = regucalcin_isoforms,
+ idxstats-lst          = idxstats-lst,
+ comparison            = comparison,
+ diff_genes            = diff_genes,
+ nsig_gene             = nsig_gene,
+ nsig_isoform          = nsig_isoform,
+ nsig_tss              = nsig_tss,
+ nsig_cds              = nsig_cds,
+ nsig_promoter         = nsig_promoter,
+ nsig_splicing         = nsig_splicing,
+ nsig_relCDS           = nsig_relCDS>;

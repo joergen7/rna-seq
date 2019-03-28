@@ -1,6 +1,6 @@
 #
 # Cookbook:: rna-seq
-# Recipe:: workflow
+# Recipe:: samtools
 #
 # Copyright:: 2015-2019 Jörgen Brandt
 #
@@ -17,10 +17,26 @@
 # limitations under the License.
 #
 
-directory node["dir"]["wf"]
 
-# place workflow
-template "#{node["dir"]["wf"]}/rna-seq.cfl" do
-  source "rna-seq.cfl"
+samtools_dir = "#{node["dir"]["software"]}/samtools"
+
+directory node["dir"]["software"]
+
+package "gcc"
+package "libncurses-dev"
+
+git 'git_clone_samtools' do
+  repository "https://github.com/samtools/samtools.git"
+  destination samtools_dir
+  revision "0.1.18"
 end
 
+bash 'compile_samtools' do
+  code 'make'
+  cwd samtools_dir
+  creates "#{samtools_dir}/samtools"
+end
+
+link "#{node["dir"]["bin"]}/samtools" do
+  to "#{samtools_dir}/samtools"
+end
