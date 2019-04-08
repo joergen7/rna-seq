@@ -1,9 +1,7 @@
-% RNA-SEQ
-%
+%---------------------------------------------------------------------
 % Cuneiform RNA-seq workflow
 %
-%
-% Copyright:: 2015-2019 Jörgen Brandt <joergen@cuneiform-lang.org>
+% Copyright 2015-2019 Jörgen Brandt <joergen@cuneiform-lang.org>
 %
 % Licensed under the Apache License, Version 2.0 (the "License");
 % you may not use this file except in compliance with the License.
@@ -16,8 +14,6 @@
 % WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 % See the License for the specific language governing permissions and
 % limitations under the License.
-%
-%
 %
 %---------------------------------------------------------------------
 
@@ -38,22 +34,15 @@ in Bash *{
   tar cf $idx idx.*
 }*
 
-def tophat-align( fq1lst   : [File],
-                  fq2lst   : [File],
+def tophat-align( fq1      : File,
+                  fq2      : File,
                   geneanno : File,
                   fa       : File,
                   idx      : File ) -> <bam : File>
 in Bash *{
-
-  r1=`printf ",%s" ${fq1lst[@]}`
-  r1=${r1:1}
-
-  r2=`printf ",%s" ${fq2lst[@]}`
-  r2=${r2:1}
-
   tar xf $idx
   ln -sf $fa idx.fa
-  tophat -p 8 --bowtie1 -G $geneanno -o thout idx $r1 $r2
+  tophat -p 4 --bowtie1 -G $geneanno -o thout idx $fq1 $fq2
   bam=thout/accepted_hits.bam
 }*
 
@@ -72,19 +61,19 @@ in Bash *{
 
 def cufflinks( bam : File ) -> <transcript : File>
 in Bash *{
-  cufflinks -p 8 -o clout $bam
+  cufflinks -p 4 -o clout $bam
   transcript=clout/transcripts.gtf
 }*
 
-def cuffmerge( transcript-lst : [File],
+def cuffmerge( transcriptlst : [File],
                geneanno       : File,
                fa             : File,
                fai            : File ) -> <merged : File>
 in Bash *{
   ln -sf $fa genome.fa
   ln -sf $fai genome.fa.fai
-  printf "%s\n" ${transcript[@]} > assemblies.txt
-  cuffmerge -p 8 -g $geneanno -s genome.fa assemblies.txt
+  printf "%s\n" ${transcriptlst[@]} > assemblies.txt
+  cuffmerge -p 4 -g $geneanno -s genome.fa assemblies.txt
   merged=merged_asm/merged.gtf
 }*
 
@@ -104,7 +93,7 @@ in Bash *{
   ln -sf $fa genome.fa
   ln -sf $fai genome.fa.fai
 
-  cuffdiff -p 8 --no-update-check \
+  cuffdiff -p 4 --no-update-check \
   -o diff_out \
   -b genome.fa \
   -L C1,C2 \
@@ -299,34 +288,48 @@ let c2-fq2-lst : [File] =
 let <idx = idx : File> =
   bowtie-build( fa = fa );
 
-let <bam = c1-bam : File> =
-  tophat-align(
-    fq1lst   = c1-fq1-lst,
-    fq2lst   = c1-fq2-lst,
-    geneanno = geneanno,
-    fa       = fa,
-    idx      = idx );
+let c1-bam-lst : [File] =
+  for c1-fq1 : File <- c1-fq1-lst,
+      c1-fq2 : File <- c1-fq2-lst do
+
+    ( tophat-align(
+        fq1      = c1-fq1,
+        fq2      = c1-fq2,
+        geneanno = geneanno,
+        fa       = fa,
+        idx      = idx )|bam ) : File
+
+  end;
+
+let c1-transcript-lst : [File] =
+  for c1-bam : File <- c1-bam-lst do
+    ( cufflinks( bam = c1-bam )|transcript ) : File
+  end;
+
+let c2-bam-lst : [File] =
+  for c2-fq1 : File <- c2-fq1-lst,
+      c2-fq2 : File <- c2-fq2-lst do
+
+      ( tophat-align(
+          fq1      = c2-fq1,
+          fq2      = c2-fq2,
+          geneanno = geneanno,
+          fa       = fa,
+          idx      = idx )|bam ) : File
+
+  end;
+
+let c2-transcript-lst : [File] =
+  for c2-bam : File <- c2-bam-lst do
+    ( cufflinks( bam = c2-bam )|transcript ) : File
+  end;
         
-let <bam = c2-bam : File> =
-  tophat-align(
-    fq1lst   = c2-fq1-lst,
-    fq2lst   = c2-fq2-lst,
-    geneanno = geneanno,
-    fa       = fa,
-    idx      = idx );
-
-let <transcript = c1-transcript : File> =
-  cufflinks( bam = c1-bam );
-
-let <transcript = c2-transcript : File> =
-  cufflinks( bam = c2-bam );
-
 let <fai = fai : File> =
   samtools-faidx( fa = fa );
 
 let <merged = merged : File> =
   cuffmerge(
-    transcript-lst = [c1-transcript, c2-transcript : File],
+    transcriptlst  = ( c1-transcript-lst+c2-transcript-lst ),
     geneanno       = geneanno,
     fa             = fa,
     fai            = fai );
@@ -334,8 +337,8 @@ let <merged = merged : File> =
 let <diff = diff : File> =
   cuffdiff(
     merged   = merged,
-    bam1-lst = [c1-bam : File],
-    bam2-lst = [c2-bam : File],
+    bam1-lst = c1-bam-lst,
+    bam2-lst = c2-bam-lst,
     fa       = fa,
     fai      = fai );
 
@@ -349,7 +352,7 @@ let <csdensity             = csdensity             : File,
 
 % step 14
 let idxstats-lst : [File] =
-  for bam : File <- [c1-bam, c2-bam : File] do
+  for bam : File <- ( c1-bam-lst+c2-bam-lst ) do
 
     let <bai = bai : File> =
       samtools-index( bam = bam );
@@ -361,7 +364,7 @@ let idxstats-lst : [File] =
 % step 15
 let <comparison = comparison : File> =
   cuffcompare(
-    gtf-lst  = [c1-transcript, c2-transcript : File],
+    gtf-lst  = ( c1-transcript-lst+c2-transcript-lst ),
     geneanno = geneanno );
 
 % steps 16-18
