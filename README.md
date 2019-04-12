@@ -1,4 +1,4 @@
-# rna-seq
+# RNA-seq
 
 This workflow exemplifies the comparison of DNA expression levels in two experimental conditions from RNA-Seq data. It reimplements a study by [Trapnell et al. 2012](http://www.nature.com/nprot/journal/v7/n3/full/nprot.2012.016.html).
 
@@ -7,68 +7,46 @@ A detailed description can be found on the [Cuneiform website](http://cuneiform-
 Below you find installation instructions for, both, the native and the virtual machine setup.
 
 
-## Prerequisites
+## Requirements
 
-Install the following packages:
+### Platforms
 
-- [git](https://git-scm.com/)
-- [Chef Development Kit](https://downloads.chef.io/chef-dk/)
+- Ubuntu 18.04
 
-If you want to set up a VM to test Cuneiform these additional packages are required:
+### Cookbooks
 
-- [VirtualBox](https://www.virtualbox.org/)
-- [Vagrant](https://www.vagrantup.com/)
+- chef-cuneiform
+  - chef-rebar3
+    -erlang
+      - build-essential
+      - mingw
+      - seven_zip
+      - windows
+      - yum-epel
+      - yum-erlang_solutions
 
+### Recipes
 
-Under Ubuntu you can install the ChefDK by entering on the command line
+- `rna-seq::bowtie` installs Bowtie 1.1.2 which is a Bowtie release old enough to be compatible with TopHat
+- `rna-seq::data` downloads the *Drosophila melanogaster* reference genome from iGenomes and the simulated transcripome samples for two conditions from NCBI
+- `rna-seq::tools` installs SAMtools, Cufflinks, R, CummeRbund, and triggers the recipes for Bowtie and TopHat
+- `rna-seq::tophat` installs TopHat 2.1.1 which is the last TopHat release published before the tool was discontinued in 2016
+- `rna-seq::workflow` installs the RNA-seq Cuneiform workflow under `/opt/wf`
 
-    sudo dpkg -i chefdk_*.deb
-
-
-## Building a VM with kitchen
-
-This section describes how to set up the workflow environment in a Virtual
-Machine (VM). To do this, it does not matter whether you are running Linux,
-Mac OS, or Windows. However, if you are running an Ubuntu and want to set up
-the workflow locally (without creating a VM), see Section Building locally.
-
-To build a VM from this cookbook for the first time, change your git
-base directory and enter the following:
-
-    git clone https://github.com/joergen7/rna-seq.git
-    cd rna-seq
-    kitchen converge
-    
-You can log into the newly built VM by entering
-
-    kitchen login
-    
-You can drop the VM by entering
-
-    kitchen destroy
-
-## Building locally
-
-This section describes how to set up this workflow locally without the indirection
-of a VM. If you want to try out this workflow in a VM first see Section Building a VM with kitchen.
-
-To install this cookbook locally, create a directory "cookbooks", clone the cookbook
-into it and run the chef client:
-
-    mkdir cookbooks
-    cd cookbooks
-    git clone https://github.com/joergen7/rna-seq.git
-    cd rna-seq
-    berks vendor ..
-    cd ../..
-    sudo chef-client -z -r "rna-seq::default"
-    
 ## Running the Workflow
 
-If you installed the workflow on a VM log into the machine by typing
+If you set up the workflow via `kitchen converge`, log into the machine by typing
 
     kitchen login
     
 Execute the workflow script by entering
 
-    cuneiform -w /opt/data /opt/wf/rna-seq.cf
+    cuneiform -d /opt/data /opt/wf/rna-seq.cfl
+    
+## Authors
+
+- Jörgen Brandt ([@joergen7](https://github.com/joergen7/)) [joergen@cuneiform-lang.org](mailto:joergen@cuneiform-lang.org)
+
+## License
+
+[Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0.html)
