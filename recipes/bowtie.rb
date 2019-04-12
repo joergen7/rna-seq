@@ -18,25 +18,29 @@
 #
 
 
-samtools_dir = "#{node["dir"]["software"]}/samtools"
+bowtie_dir = "#{node["dir"]["software"]}/bowtie"
 
 directory node["dir"]["software"]
 
-package "gcc"
-package "libncurses-dev"
+package "gcc-5"
+package "g++-5"
 
-git 'git_clone_samtools' do
-  repository "https://github.com/samtools/samtools.git"
-  destination samtools_dir
-  revision "0.1.18"
+git 'git_clone_bowtie' do
+  repository "https://github.com/BenLangmead/bowtie.git"
+  destination bowtie_dir
+  revision "v1.1.2"
 end
 
-bash 'compile_samtools' do
-  code 'make'
-  cwd samtools_dir
-  creates "#{samtools_dir}/samtools"
+bash 'compile_bowtie' do
+  code 'make CC=gcc-5 CXX=g++-5'
+  cwd bowtie_dir
+  creates "#{bowtie_dir}/bowtie-align-l"
 end
 
-link "#{node["dir"]["bin"]}/samtools" do
-  to "#{samtools_dir}/samtools"
+link "#{node["dir"]["bin"]}/bowtie" do
+  to "#{bowtie_dir}/bowtie"
+end
+
+link "#{node["dir"]["bin"]}/bowtie-build" do
+  to "#{bowtie_dir}/bowtie-build"
 end

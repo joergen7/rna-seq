@@ -17,10 +17,10 @@
 # limitations under the License.
 #
 
-package "bowtie"
 package "cufflinks"
 package "r-base"
 package "r-bioc-cummerbund"
+package "samtools"
 
-include_recipe "rna-seq::samtools"
+include_recipe "rna-seq::bowtie"
 include_recipe "rna-seq::tophat"

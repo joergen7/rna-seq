@@ -42,7 +42,7 @@ def tophat-align( fq1      : File,
 in Bash *{
   tar xf $idx
   ln -sf $fa idx.fa
-  tophat -p 4 --bowtie1 -G $geneanno -o thout idx $fq1 $fq2
+  tophat -p 8 --bowtie1 -G $geneanno -o thout idx $fq1 $fq2
   bam=thout/accepted_hits.bam
 }*
 
@@ -61,7 +61,7 @@ in Bash *{
 
 def cufflinks( bam : File ) -> <transcript : File>
 in Bash *{
-  cufflinks -p 4 -o clout $bam
+  cufflinks -p 8 -o clout $bam
   transcript=clout/transcripts.gtf
 }*
 
@@ -70,52 +70,39 @@ def cuffmerge( transcriptlst : [File],
                fa             : File,
                fai            : File ) -> <merged : File>
 in Bash *{
-  ln -sf $fa genome.fa
-  ln -sf $fai genome.fa.fai
+  z=genome13581.fa
+  ln -s $fa $z
+  ln -s $fai ${z}.fai
   printf "%s\n" ${transcriptlst[@]} > assemblies.txt
-  cuffmerge -p 4 -g $geneanno -s genome.fa assemblies.txt
+  cuffmerge -p 8 -g $geneanno -s $z assemblies.txt
   merged=merged_asm/merged.gtf
 }*
 
 def cuffdiff( merged : File,
-              bam1-lst : [File],
-              bam2-lst : [File],
+              bam1lst : [File],
+              bam2lst : [File],
               fa       : File,
               fai      : File ) -> <diff : File>
 in Bash *{
-
-  b1=`printf ",%s" ${bam1[@]}`
+  b1=`printf ",%s" ${bam1lst[@]}`
   b1=${b1:1}
 
-  b2=`printf ",%s" ${bam2[@]}`
+  b2=`printf ",%s" ${bam2lst[@]}`
   b2=${b2:1}
 
-  ln -sf $fa genome.fa
-  ln -sf $fai genome.fa.fai
+  z=genome13582.fa
+  ln -s $fa $z
+  ln -s $fai ${z}.fai
 
-  cuffdiff -p 4 --no-update-check \
+  cuffdiff -p 8 --no-update-check \
   -o diff_out \
-  -b genome.fa \
+  -b $z \
   -L C1,C2 \
   -u $merged \
   $b1 $b2
 
   diff=diff.tar
   tar cf $diff diff_out
-}*
-
-def cuffcompare( gtf-lst : [File], geneanno : File ) -> <comparison : File>
-in Bash *{
-
-  printf "%s\n" ${gtf[@]} > gtf_out_list.txt
-  cuffcompare -i gtf_out_list.txt -r $geneanno
-
-  out=comparison.csv
-  for i in `ls *.tmap`
-  do
-    echo $i >> $out
-    awk 'NR > 1 { s[$3]++ } END { for (j in s) { print j, s[j] }}' $i >> $out
-  done
 }*
 
 def cummerbund1( diff : File ) ->
@@ -336,11 +323,11 @@ let <merged = merged : File> =
 
 let <diff = diff : File> =
   cuffdiff(
-    merged   = merged,
-    bam1-lst = c1-bam-lst,
-    bam2-lst = c2-bam-lst,
-    fa       = fa,
-    fai      = fai );
+    merged  = merged,
+    bam1lst = c1-bam-lst,
+    bam2lst = c2-bam-lst,
+    fa      = fa,
+    fai     = fai );
 
 % steps 9-13
 let <csdensity             = csdensity             : File,
@@ -361,11 +348,7 @@ let idxstats-lst : [File] =
 
   end;
 
-% step 15
-let <comparison = comparison : File> =
-  cuffcompare(
-    gtf-lst  = ( c1-transcript-lst+c2-transcript-lst ),
-    geneanno = geneanno );
+% we leave out step 15 because cuffcompare can't connect to its update server
 
 % steps 16-18
 let <diff_genes    = diff_genes    : File,
@@ -389,7 +372,6 @@ let <diff_genes    = diff_genes    : File,
  regucalcin_expression = regucalcin_expression,
  regucalcin_isoforms   = regucalcin_isoforms,
  idxstats-lst          = idxstats-lst,
- comparison            = comparison,
  diff_genes            = diff_genes,
  nsig_gene             = nsig_gene,
  nsig_isoform          = nsig_isoform,
